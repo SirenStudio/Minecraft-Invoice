@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cherry Blossom Invoice Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --wood:#7a4a2a; --wood-dark:#4a2b16; --wood-light:#b27a4a;
+  --cream:#fdf0ea; --pink:#d6416f; --pink-dark:#a52a52; --pink-soft:#f8d9e2; --pink-row:#fbe9ee;
+  --ink:#2a1a1a;
+  --pink-hi:#ff86a8; --pink-edge:#8a2447; --sky:#8fc8f0;
+  --t1:#ffc4d6; --t2:#e0709a; --t3:#a52a52;
+  --b1:#ff9fbd; --b2:#ffc2d4; --b3:#ff7fa6;
+  --g1:#f7a9c3; --g2:#f48fb1; --g3:#e57a9f;
+  --glass:.86; --cream-rgb:253,240,234; --odd-rgb:253,247,244; --row-rgb:251,233,238;
+}
+:root[data-theme=yellow]{--row-rgb:253,243,210;--pink:#d99500;--pink-dark:#9a6400;--pink-soft:#fbeab8;--pink-row:#fdf3d2;--pink-hi:#ffd96a;--pink-edge:#7a5200;--t1:#ffeaa0;--t2:#f0b830;--t3:#a86f00;--b1:#ffd34d;--b2:#ffe58a;--b3:#f5b800;--g1:#fbe08a;--g2:#f7cf58;--g3:#e8b52c}
+:root[data-theme=purple]{--row-rgb:239,228,247;--pink:#6a2c91;--pink-dark:#43195f;--pink-soft:#e3d3f0;--pink-row:#efe4f7;--pink-hi:#a86fd0;--pink-edge:#2e0f45;--t1:#d9b8f2;--t2:#9a5cc8;--t3:#43195f;--b1:#b47ee0;--b2:#d2aef0;--b3:#8e4fc0;--g1:#a57bd0;--g2:#7f4fb0;--g3:#5a2e85}
+:root[data-theme=green]{--row-rgb:230,246,236;--pink:#2f9e57;--pink-dark:#1c6e3a;--pink-soft:#d3efdc;--pink-row:#e6f6ec;--pink-hi:#6fd896;--pink-edge:#0f4a25;--t1:#c4f2d4;--t2:#59c283;--t3:#1c6e3a;--b1:#7ed99f;--b2:#b4ecc8;--b3:#4fbf79;--g1:#8fd8a8;--g2:#5fbf80;--g3:#3a9a5c}
+:root[data-theme=blue]{--row-rgb:230,239,251;--pink:#2f74d0;--pink-dark:#1c4c94;--pink-soft:#d3e4f8;--pink-row:#e6effb;--pink-hi:#7ab0f0;--pink-edge:#123466;--sky:#cfe9f9;--t1:#c4dcfa;--t2:#5f9ae0;--t3:#1c4c94;--b1:#7fb3f0;--b2:#b4d3f8;--b3:#5a95e0;--g1:#8fb8ec;--g2:#6a9ae0;--g3:#4a78c0}
+.sw{width:30px;height:30px;padding:0!important;border:3px solid var(--wood-dark)!important;box-shadow:none!important;cursor:pointer}
+.sw.on{outline:3px solid #fff;outline-offset:1px}
+.themes{display:flex;gap:6px;align-items:center;font-family:'Silkscreen',monospace;font-size:12px;color:#fff}
+*{box-sizing:border-box}
+html,body{overflow-anchor:none}
+body{margin:0;background:#2b1a22;font-family:'Poppins',sans-serif;font-size:13pt;line-height:1.35;color:var(--ink);padding-bottom:40px}
+
+/* toolbar */
+.toolbar{position:sticky;top:0;z-index:50;background:#1d1217;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;box-shadow:0 2px 10px #0008}
+.toolbar button,.toolbar label.btn,.toolbar select{font-family:'Silkscreen',monospace;font-size:13px;border:3px solid var(--wood-dark);background:var(--pink);color:#fff;padding:8px 12px;cursor:pointer;border-radius:0;box-shadow:inset -3px -3px 0 var(--pink-dark),inset 3px 3px 0 var(--pink-hi)}
+.toolbar button:hover,.toolbar label.btn:hover{filter:brightness(1.1)}
+.toolbar button.alt,.toolbar label.btn.alt,.toolbar select{background:var(--wood-light);box-shadow:inset -3px -3px 0 var(--wood),inset 3px 3px 0 #d9a577}
+.toolbar select{padding:8px 6px}
+
+.stage{width:100%;display:flex;justify-content:center;align-items:flex-start;overflow:hidden;margin-top:16px}
+.sheet-wrap{transform-origin:top center}
+
+/* sheet = A4 @ 96dpi */
+.sheet{
+  --rowh:36px;width:794px;height:1123px;position:relative;padding:262px 26px 22px;display:flex;flex-direction:column;
+  background-color:var(--sky);
+  background-image:var(--bg-img),
+    radial-gradient(circle at 20% 30%,var(--b1) 0 7px,transparent 8px),
+    radial-gradient(circle at 70% 60%,var(--b2) 0 6px,transparent 7px),
+    radial-gradient(circle at 45% 80%,var(--b3) 0 8px,transparent 9px),
+    linear-gradient(var(--sky) 0,var(--sky) 140px,var(--g1) 140px,var(--g2) 60%,var(--g3) 100%);
+  background-size:cover,70px 70px,90px 90px,110px 110px,cover;
+  background-position:center;
+  overflow:hidden;
+  image-rendering:auto;
+}
+.sheet>*{flex-shrink:0}
+.title-block{position:absolute;top:70px;left:0;right:0;text-align:center}
+.title-block h1{margin:0;display:inline-block;font-family:'Press Start 2P',monospace;font-size:62px;letter-spacing:2px;color:var(--t1);
+  text-shadow:0 4px 0 var(--t2),0 8px 0 var(--t3),0 12px 0 #5a2a2a,4px 4px 0 #5a2a2a,-3px 4px 0 #5a2a2a,0 16px 18px #0007;
+  padding:8px 26px;background:var(--wood);border:6px solid var(--wood-dark);box-shadow:inset 0 0 0 4px #9a6238}
+.subtitle{display:table;margin:14px auto 0;font-family:'Silkscreen',monospace;font-weight:700;font-size:16px;letter-spacing:2px;color:#fff;background:var(--pink);border:3px solid var(--wood-dark);box-shadow:inset -3px -3px 0 var(--pink-dark),inset 3px 3px 0 var(--pink-hi),0 3px 0 var(--wood-dark);padding:4px 18px}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:12px}
+.panel{position:relative;background:rgba(var(--cream-rgb),var(--glass));border:6px solid var(--wood);box-shadow:0 0 0 3px var(--wood-dark),inset 0 0 0 2px #e6c9b8;padding:20px 14px 10px}
+.tag{position:absolute;top:-17px;left:-12px;background:var(--pink);color:#fff;font-family:'Silkscreen',monospace;font-weight:700;font-size:18px;padding:4px 14px;border:3px solid var(--wood-dark);box-shadow:inset -3px -3px 0 var(--pink-dark)}
+.contact input.name{font-size:13pt;font-weight:600;width:100%;margin-bottom:2px}
+.line{display:flex;align-items:center;gap:10px;margin:3px 0}
+.ico{flex:0 0 26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.line input{flex:1}
+.line textarea{flex:1;resize:none;overflow:hidden;line-height:23px;display:block;font-size:13pt}
+
+input,textarea,select.f{font-family:'Poppins',sans-serif;font-size:13pt;line-height:1.35;color:var(--ink);background:transparent;border:0;outline:0;padding:3px 4px;width:100%;border-radius:0}
+input:hover,input:focus,textarea:hover,textarea:focus{background:#ffe3ec88;box-shadow:0 0 0 1px var(--pink)}
+
+.meta{background:rgba(var(--cream-rgb),var(--glass));border:6px solid var(--wood);box-shadow:0 0 0 3px var(--wood-dark);padding:9px 14px;display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 12px;align-items:center;margin-bottom:12px}
+.meta label{font-family:'Silkscreen',monospace;font-weight:700;font-size:14px}
+.meta input{border:2px solid #8a6a5a;background:rgba(255,255,255,.8);height:32px}
+
+.items{border:6px solid var(--wood);box-shadow:0 0 0 3px var(--wood-dark);background:transparent;margin-bottom:12px;position:relative;flex:1 0 auto;display:flex;flex-direction:column}
+.items .fill{flex:1 1 auto;background:linear-gradient(var(--c1) 50%,var(--c2) 50%);background-size:100% calc(var(--rowh)*2)}
+.items .fill[data-next=odd]{--c1:rgba(var(--odd-rgb),var(--glass));--c2:rgba(var(--row-rgb),var(--glass))}
+.items .fill[data-next=even]{--c1:rgba(var(--row-rgb),var(--glass));--c2:rgba(var(--odd-rgb),var(--glass))}
+.items table{width:100%;border-collapse:collapse;table-layout:fixed}
+.items th{background:var(--pink);color:#fff;font-family:'Silkscreen',monospace;font-size:15px;padding:8px 4px;border-right:2px solid var(--pink-edge)}
+.items td{border-right:2px solid var(--pink-edge);padding:2px;vertical-align:top;height:var(--rowh)}
+.items tr:nth-child(even) td{background:rgba(var(--row-rgb),var(--glass))}
+.items tr:nth-child(odd) td{background:rgba(var(--odd-rgb),var(--glass))}
+.items td:last-child,.items th:last-child{border-right:0}
+.items td.n{text-align:center;padding-top:calc((var(--rowh) - 22px)/2);font-weight:600;line-height:22px}
+.items input.num{text-align:right;padding-left:4px;-moz-appearance:textfield;appearance:textfield}
+.items input.num::-webkit-outer-spin-button,.items input.num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.items td.hs{position:relative;padding-left:26px}
+.step{position:absolute;left:3px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;z-index:1}
+.step button{width:18px;height:12px;padding:0;border:0;background:var(--pink);cursor:pointer;position:relative;border-radius:2px;touch-action:manipulation}
+.step button:hover{filter:brightness(1.15)}
+.step button:active{filter:brightness(.9)}
+.step button::after{content:'';position:absolute;left:50%;top:50%;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;margin-left:-4px}
+.step button[data-dir="1"]::after{border-bottom:5px solid #fff;margin-top:-3px}
+.step button[data-dir="-1"]::after{border-top:5px solid #fff;margin-top:-2px}
+.items td.amt{padding:calc((var(--rowh) - 22px)/2) 8px 0 4px;text-align:right;font-weight:500;line-height:22px}
+.items td.del{padding:0;text-align:center}
+.items td.del .rm{position:static;margin:calc((var(--rowh) - 26px)/2) auto 0}
+.items textarea{resize:none;overflow:hidden;min-height:calc(var(--rowh) - 4px);display:block}
+.items td input,.items td textarea{line-height:22px;padding-top:2px;padding-bottom:2px}
+.items td textarea{padding-top:calc((var(--rowh) - 26px)/2);padding-bottom:calc((var(--rowh) - 26px)/2)}
+.items input.num{height:calc(var(--rowh) - 4px);padding-top:0;padding-bottom:0}
+.rm{position:absolute;right:3px;top:4px;background:#c0392b;color:#fff;border:0;font-family:'Silkscreen';font-size:11px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;padding:0;border-radius:2px}
+.rm:hover{background:#e04b3a}
+.addrow{display:block;width:100%;background:var(--pink-soft);border:0;border-top:2px dashed var(--pink);padding:6px;font-family:'Silkscreen',monospace;font-size:13px;color:var(--pink-dark);cursor:pointer}
+
+.bottom{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;align-items:stretch}
+.rightcol{display:flex;flex-direction:column;gap:12px}
+.notes{display:flex;flex-direction:column}
+.notes textarea{width:100%;flex:1;min-height:90px;resize:none;background-image:repeating-linear-gradient(transparent 0 29px,#4a3a3a 29px 30px);line-height:30px;padding:0 4px;overflow:hidden}
+.totals{border:6px solid var(--wood);box-shadow:0 0 0 3px var(--wood-dark);background:rgba(255,255,255,.78)}
+.trow{display:grid;grid-template-columns:130px 1fr;border-bottom:2px solid #8a6a5a;align-items:center;min-height:36px}
+.trow span.l{font-family:'Silkscreen',monospace;font-weight:700;font-size:14px;padding:0 12px;align-self:stretch;display:flex;align-items:center;background:rgba(var(--cream-rgb),.7)}
+.trow .v{padding:0 10px;text-align:right;font-weight:500;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.trow .v input{width:70px;text-align:right;border:1px solid #cbb}
+.trow .v select{font-family:'Poppins';font-size:12px;border:1px solid #cbb;background:#fff}
+.trow.total{background:var(--pink);border-bottom:0;min-height:44px}
+.trow.total span.l{background:var(--pink);color:#fff;font-size:22px;border-right:0}
+.trow.total .v{color:#fff;font-weight:600;font-size:13pt;background:var(--pink-dark)}
+.footer-space{height:90px}
+
+/* ---------- responsive: tablet / phone (classes set by JS; export & print use the fixed A4 layout) ---------- */
+.fluid .stage{height:auto!important;overflow:visible;margin-top:10px}
+.fluid .sheet-wrap{transform:none!important;width:100%}
+.fluid .sheet{width:100%;height:auto;display:block;padding:calc(152px + clamp(34px,9.5vw,62px)*1.16) 14px 18px}
+.fluid .title-block{top:40px}
+.fluid .title-block h1{font-size:clamp(34px,9.5vw,62px);padding:6px 16px;border-width:4px}
+.fluid .subtitle{font-size:clamp(11px,2.8vw,16px);letter-spacing:1px;padding:3px 10px;margin-top:10px}
+.fluid .row2{gap:26px}
+.fluid .items{margin-bottom:16px}
+.fluid .fill{display:none}
+.fluid .bottom{gap:16px}
+.fluid .notes textarea{min-height:110px}
+
+.compact .toolbar{position:static;padding:8px;gap:6px}
+.compact .toolbar button,.compact .toolbar label.btn,.compact .toolbar select{font-size:11px;padding:6px 8px}
+.compact .sw{width:26px;height:26px}
+.compact .sheet{padding-left:8px;padding-right:8px}
+.compact .row2{grid-template-columns:1fr}
+.compact .meta{grid-template-columns:auto 1fr}
+.compact .bottom{grid-template-columns:1fr}
+.compact .panel{padding-left:12px;padding-right:12px}
+.compact .items table,.compact .items tbody,.compact .items tr,.compact .items td{display:block}
+.compact .items thead{display:none}
+.compact .items tbody tr{display:grid;grid-template-columns:30px 1fr 1fr 1fr;grid-template-areas:"n d d d" "n q p a";gap:2px 6px;padding:8px 40px 8px 4px;position:relative;border-bottom:2px solid var(--pink-edge)}
+.compact .items tbody tr:nth-child(even){background:rgba(var(--row-rgb),var(--glass))}
+.compact .items tbody tr:nth-child(odd){background:rgba(var(--odd-rgb),var(--glass))}
+.compact .items td{border:0;height:auto;padding:0;background:transparent!important}
+.compact .items td.n{grid-area:n;padding-top:8px;text-align:center}
+.compact .items td:nth-child(2){grid-area:d}
+.compact .items td:nth-child(3){grid-area:q}
+.compact .items td:nth-child(4){grid-area:p}
+.compact .items td.amt{grid-area:a;position:static;padding:0 4px;text-align:right}
+.compact .items td.amt .a{display:block;padding-top:6px;min-height:42px}
+.compact .items td:nth-child(n+3)::before{display:block;font-family:'Silkscreen',monospace;font-size:10px;color:var(--pink-dark);padding:0 4px;white-space:nowrap}
+.compact .items td.hs::before{margin-left:-30px}
+.compact .items td:nth-child(3)::before{content:'QTY'}
+.compact .items td:nth-child(4)::before{content:'UNIT PRICE'}
+.compact .items td:nth-child(5)::before{content:'AMOUNT'}
+.compact .step{top:auto;bottom:2px;transform:none}
+.compact .step button{width:26px;height:17px}
+.compact .items td.hs{padding-left:32px}
+.compact .items input.num{padding-left:6px;border:1px solid #d9b8c4;background:#fff;height:38px}
+.compact .items td textarea{padding-top:9px;padding-bottom:9px;border:1px solid #d9b8c4;background:#fff;min-height:40px}
+.compact .items td.del{position:absolute;right:8px;top:8px;padding:0}
+.compact .items td.del .rm{margin:0;width:32px;height:32px}
+.compact .trow{grid-template-columns:110px 1fr}
+
+/* stamp box */
+.sig{margin:0;width:auto;flex:1 0 92px;min-height:92px;background:rgba(var(--cream-rgb),var(--glass));border:6px solid var(--wood);box-shadow:0 0 0 3px var(--wood-dark);padding:4px 12px;position:relative;display:flex;align-items:center;gap:10px}
+.stampart{flex:0 0 auto;width:68px;height:72px;cursor:pointer;display:flex;align-items:flex-end}
+.stampart svg,.stampart img{height:100%;width:auto;max-width:96px;display:block}
+.stampart img{image-rendering:auto;object-fit:contain}
+.stampside{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.sig-label{font-family:'Silkscreen',monospace;font-weight:700;font-size:11px;align-self:flex-start}
+.imprint{font-family:'Silkscreen',monospace;font-weight:700;font-size:14px;line-height:1.15;text-align:center;color:#146c36;border:3px double #146c36;border-radius:5px;padding:3px 10px;transform:rotate(-5deg);background:rgba(34,197,94,.12);letter-spacing:.5px}
+.imprint span{display:block}
+.fluid .sig{flex:none}
+.compact .sig{min-height:100px}
+
+/* export mode */
+.exporting .items col.act,.exporting .items th.act,.exporting .items td.del,.exporting .step{display:none!important}
+.exporting .items td.amt,.exporting .items th:nth-child(5){border-right:0}
+.exporting .rm,.exporting .addrow,.exporting .hint{display:none!important}
+.exporting input,.exporting textarea{box-shadow:none!important;background:transparent!important}
+.exporting input::placeholder,.exporting textarea::placeholder{color:transparent}
+.exporting .meta input{background:rgba(255,255,255,.8)!important}
+
+@media print{
+  @page{size:A4;margin:0}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff;padding:0}
+  .toolbar,.modal,.rm,.addrow,.hint{display:none!important}
+  .stage{height:auto!important;overflow:visible;margin:0;display:block}
+  .sheet-wrap{transform:none!important}
+  .sheet{width:210mm;height:296mm}
+  input,textarea{box-shadow:none!important;background:transparent!important}
+  .meta input{background:rgba(255,255,255,.8)!important}
+  .items col.act,.items th.act,.items td.del,.step{display:none!important}
+  .items td.amt,.items th:nth-child(5){border-right:0}
+}
+/* signature modal */
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:100}
+.modal.on{display:flex}
+.modal .box{background:var(--cream);border:6px solid var(--wood);padding:16px;max-width:96vw}
+.modal canvas{background:#fff;border:2px solid #8a6a5a;touch-action:none;max-width:100%}
+.modal .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.modal button,.modal label{font-family:'Silkscreen';font-size:13px;border:3px solid var(--wood-dark);background:var(--pink);color:#fff;padding:7px 12px;cursor:pointer}
+.modal .alt{background:var(--wood-light)}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button id="btnPdf">⬇ SAVE AS PDF</button>
+  <button class="alt" id="btnNew">NEW INVOICE</button>
+  <button class="alt" id="btnPrint">PRINT</button>
+  <div class="themes">THEME
+    <button class="sw" data-t="pink" style="background:#d6416f" title="Pink"></button>
+    <button class="sw" data-t="yellow" style="background:#e8a800" title="Yellow"></button>
+    <button class="sw" data-t="purple" style="background:#6a2c91" title="Dark purple"></button>
+    <button class="sw" data-t="green" style="background:#2f9e57" title="Green"></button>
+    <button class="sw" data-t="blue" style="background:#2f74d0" title="Blue"></button>
+  </div>
+  <select id="currency" title="Currency">
+    <option value="$|USD">$ USD</option>
+    <option value="₱|PHP">₱ PHP</option>
+    <option value="AED |AED">AED</option>
+    <option value="€|EUR">€ EUR</option>
+    <option value="£|GBP">£ GBP</option>
+    <option value="¥|JPY">¥ JPY</option>
+    <option value="A$|AUD">A$ AUD</option>
+    <option value="S$|SGD">S$ SGD</option>
+  </select>
+  <label class="btn alt">🖼 BACKGROUND<input type="file" id="bgFile" accept="image/*" hidden></label>
+  <button class="alt" id="btnBgReset">RESET BG</button>
+  <span id="pageWarn" style="display:none;color:#ffb4c0;font-family:Silkscreen,monospace;font-size:12px">⚠ A4 PAGE IS FULL</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="sheet-wrap" id="wrap">
+<div class="sheet" id="sheet">
+
+  <div class="title-block"><h1>INVOICE</h1><div class="subtitle">Java and Bedrock Edition</div></div>
+
+  <div class="row2">
+    <div class="panel contact"><div class="tag">FROM:</div>
+      <input class="name" data-k="fromName" placeholder="Your name / business" value="SirenStudio">
+      <div class="line"><span class="ico">✆</span><input data-k="fromPhone" placeholder="Phone" value="+63 960 628 5615"></div>
+      <div class="line"><span class="ico">⌖</span><textarea data-k="fromAddr" rows="1" placeholder="Address">Blk 24 Lot 14 Brgy. Sta. Maria, Dasmariñas City, Cavite</textarea></div>
+      <div class="line"><span class="ico">✉</span><input data-k="fromMail" placeholder="Email" value="abynez2025@gmail.com"></div>
+    </div>
+    <div class="panel contact"><div class="tag">BILL TO:</div>
+      <input class="name" data-k="toName" placeholder="Client name" value="Rumao Corp LLC">
+      <div class="line"><span class="ico">✆</span><input data-k="toPhone" placeholder="Phone" value="+33 6 58 87 58 31"></div>
+      <div class="line"><span class="ico">⌖</span><textarea data-k="toAddr" rows="1" placeholder="Address">Peninsula Business Bay, Dubai</textarea></div>
+      <div class="line"><span class="ico">✉</span><input data-k="toMail" placeholder="Email" value="kreativeindustry@gmail.com"></div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <label>INVOICE NO.:</label><input data-k="invNo" id="invNo" placeholder="001">
+    <label>DUE DATE:</label><input data-k="dueDate" class="datef" placeholder="Pick a date" readonly>
+    <label>ISSUE DATE:</label><input data-k="issueDate" class="datef" placeholder="Pick a date" readonly>
+    <label>PAYMENT TERMS:</label><input data-k="terms" placeholder="e.g. Net 7">
+  </div>
+
+  <div class="items" id="items">
+    <table>
+      <colgroup><col style="width:44px"><col><col style="width:84px"><col style="width:120px"><col style="width:124px"><col class="act" style="width:50px"></colgroup>
+      <thead><tr><th>#</th><th>DESCRIPTION</th><th>QTY</th><th>UNIT PRICE</th><th>AMOUNT</th><th class="act"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <button class="addrow" id="addRow">+ ADD ITEM</button>
+    <div class="fill" id="fill" data-next="even"></div>
+  </div>
+
+  <div class="bottom">
+    <div class="panel notes"><div class="tag">NOTES:</div>
+      <textarea data-k="notes" placeholder="Payment details, thank-you note..."></textarea>
+    </div>
+    <div class="rightcol">
+    <div class="totals">
+      <div class="trow"><span class="l">SUBTOTAL</span><div class="v" id="subtotal">0.00</div></div>
+      <div class="trow total"><span class="l">TOTAL</span><div class="v" id="total">0.00</div></div>
+    </div>
+    <div class="sig" id="sig">
+      <div class="stampart" id="stampArt" title="Click to use your own stamp picture"><svg id="stampSvg" viewBox="0 0 22 32" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect x="12" y="0" width="9" height="5" fill="#22c55e"/><rect x="13" y="1" width="3" height="2" fill="#86efac"/><rect x="17" y="2" width="2" height="2" fill="#4ade80"/><rect x="12" y="4" width="9" height="1" fill="#15803d"/><rect x="20" y="1" width="1" height="4" fill="#15803d"/><rect x="15" y="5" width="3" height="3" fill="#9a6a3a"/><rect x="16" y="5" width="1" height="3" fill="#6b4220"/><rect x="15" y="8" width="3" height="3" fill="#f2c9a0"/><rect x="15" y="11" width="3" height="9" fill="#2a9d8f"/><rect x="13" y="17" width="3" height="3" fill="#2a9d8f"/><rect x="3" y="5" width="10" height="3" fill="#e0527f"/><rect x="3" y="7" width="10" height="1" fill="#b0305a"/><rect x="7" y="4" width="2" height="1" fill="#e0527f"/><rect x="4" y="8" width="8" height="8" fill="#f2c9a0"/><rect x="5" y="11" width="2" height="2" fill="#2a1a1a"/><rect x="9" y="11" width="2" height="2" fill="#2a1a1a"/><rect x="5" y="11" width="1" height="1" fill="#ffffff"/><rect x="9" y="11" width="1" height="1" fill="#ffffff"/><rect x="6" y="14" width="4" height="1" fill="#b34a4a"/><rect x="5" y="13" width="1" height="1" fill="#b34a4a"/><rect x="10" y="13" width="1" height="1" fill="#b34a4a"/><rect x="4" y="13" width="1" height="1" fill="#f4a3a3"/><rect x="11" y="13" width="1" height="1" fill="#f4a3a3"/><rect x="6" y="16" width="4" height="1" fill="#d9a77c"/><rect x="3" y="17" width="10" height="9" fill="#2a9d8f"/><rect x="4" y="18" width="8" height="8" fill="#fdf0ea"/><rect x="6" y="22" width="4" height="3" fill="#e6c9b8"/><rect x="7" y="19" width="2" height="2" fill="#22c55e"/><rect x="7" y="19" width="1" height="1" fill="#86efac"/><rect x="0" y="17" width="3" height="8" fill="#2a9d8f"/><rect x="0" y="24" width="3" height="2" fill="#f2c9a0"/><rect x="4" y="26" width="3" height="4" fill="#4a3560"/><rect x="9" y="26" width="3" height="4" fill="#4a3560"/><rect x="4" y="30" width="3" height="2" fill="#5a3a1e"/><rect x="9" y="30" width="3" height="2" fill="#5a3a1e"/></svg></div>
+      <div class="stampside"><div class="sig-label">AUTHORIZED STAMP:</div><div class="imprint"><span>Nice Business</span><span>with you</span></div></div>
+      <button class="rm" id="stampReset" title="Back to the default stamp" style="display:none">×</button>
+      <input type="file" id="stampFile" accept="image/*" hidden>
+    </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const root = document.documentElement;
+function setMode(){ const w = window.innerWidth; root.classList.toggle('fluid', w <= 820); root.classList.toggle('compact', w <= 600); }
+function withA4(fn){            // run fn using the fixed A4 layout, then restore the screen layout
+  const f = root.classList.contains('fluid'), c = root.classList.contains('compact');
+  const sx = window.scrollX, sy = window.scrollY;
+  root.classList.remove('fluid','compact');
+  try { return fn(); }
+  finally { root.classList.toggle('fluid', f); root.classList.toggle('compact', c); window.scrollTo(sx, sy); }
+}
+function growAll(){ $$('textarea').forEach(grow); }
+setMode();
+const KEY = 'cherry-invoice-v1';
+let stampData = '', bgData = '', theme = 'pink';
+function setTheme(t){
+  theme = t; document.documentElement.setAttribute('data-theme', t);
+  $$('.sw').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+}
+$$('.sw').forEach(b => b.onclick = () => { setTheme(b.dataset.t); save(); });
+let cur = '$';
+
+const defaults = () => ({ items:[{d:'',q:1,p:''}], currency:'$|USD' });
+
+/* ---------- rows ---------- */
+function addRow(item = {d:'',q:1,p:''}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="n"></td>
+    <td><textarea rows="1" placeholder="Item description" class="d"></textarea></td>
+    <td class="hs"><div class="step"><button type="button" tabindex="-1" data-dir="1" aria-label="Increase quantity"></button><button type="button" tabindex="-1" data-dir="-1" aria-label="Decrease quantity"></button></div><input class="num q" type="number" min="0" step="any" data-step="1"></td>
+    <td class="hs"><div class="step"><button type="button" tabindex="-1" data-dir="1" aria-label="Increase price"></button><button type="button" tabindex="-1" data-dir="-1" aria-label="Decrease price"></button></div><input class="num p" type="number" min="0" step="any" placeholder="0.00" data-step="1"></td>
+    <td class="amt"><span class="a">0.00</span></td>
+    <td class="del"><button class="rm" title="Remove item" aria-label="Remove item"><svg viewBox="0 0 12 12" width="14" height="14" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="1" width="2" height="1" fill="#fff"/><rect x="2" y="2" width="8" height="1" fill="#fff"/><rect x="3" y="4" width="6" height="7" fill="#fff"/><rect x="4" y="5" width="1" height="5" fill="#c0392b"/><rect x="7" y="5" width="1" height="5" fill="#c0392b"/></svg></button></td>`;
+  tr.querySelector('.d').value = item.d;
+  tr.querySelector('.q').value = item.q;
+  tr.querySelector('.p').value = item.p;
+  tr.querySelector('.rm').onclick = () => { tr.remove(); if(!$$('#rows tr').length) addRow(); calc(); };
+  $('#rows').appendChild(tr);
+  grow(tr.querySelector('.d'));
+}
+function grow(t){ t.style.height='auto'; t.style.height=t.scrollHeight+'px'; }
+
+/* ---------- calc ---------- */
+const money = n => cur + (isFinite(n) ? n : 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function fitPage(){
+  const sheet=$('#sheet'); let h=36;
+  const set=()=>{ sheet.style.setProperty('--rowh',h+'px'); $$('#rows textarea,.line textarea,.notes textarea').forEach(grow); };
+  set();
+  while (sheet.scrollHeight>sheet.clientHeight+1 && h>30){ h-=2; set(); }
+  $('#fill').dataset.next = ($$('#rows tr').length % 2 === 0) ? 'odd' : 'even';
+  const ok = sheet.scrollHeight<=sheet.clientHeight+1;
+  $('#pageWarn').style.display = ok ? 'none' : '';
+  return ok;
+}
+function calc() {
+  let sub = 0;
+  $$('#rows tr').forEach((tr,i) => {
+    tr.querySelector('.n').textContent = i+1;
+    const a = (parseFloat(tr.querySelector('.q').value)||0) * (parseFloat(tr.querySelector('.p').value)||0);
+    tr.querySelector('.a').textContent = a ? money(a) : '';
+    sub += a;
+  });
+  $('#subtotal').textContent = money(sub);
+  $('#total').textContent = money(sub);
+  const sx = window.scrollX, sy = window.scrollY;
+  withA4(fitPage); growAll(); save(); fit();
+  window.scrollTo(sx, sy);
+}
+
+/* ---------- save / load ---------- */
+function collect() {
+  const o = { fields:{}, items:[], stamp:stampData, bg:bgData, theme, currency:$('#currency').value };
+  $$('[data-k]').forEach(el => o.fields[el.dataset.k] = el.value);
+  $$('#rows tr').forEach(tr => o.items.push({d:tr.querySelector('.d').value,q:tr.querySelector('.q').value,p:tr.querySelector('.p').value}));
+  return o;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(collect())); }catch(e){} }
+function load() {
+  let o; try{ o = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if (o) {
+    $$('[data-k]').forEach(el => { if (o.fields[el.dataset.k] !== undefined) el.value = o.fields[el.dataset.k]; });
+    (o.items&&o.items.length ? o.items : [{d:'',q:1,p:''}]).forEach(addRow);
+    if (o.currency) $('#currency').value = o.currency;
+    if (o.stamp) setStamp(o.stamp);
+    if (o.bg) setBg(o.bg);
+    setTheme(o.theme || 'pink');
+  } else {
+    setTheme('pink');
+    addRow({d:'Sample item',q:1,p:''});
+    const t = new Date(), f = d => d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+    $('[data-k=issueDate]').value = f(t);
+    const du = new Date(t); du.setDate(du.getDate()+7);
+    $('[data-k=dueDate]').value = f(du);
+    $('[data-k=terms]').value = 'Net 7';
+    $('#invNo').value = '001';
+  }
+  cur = $('#currency').value.split('|')[0];
+}
+
+/* ---------- date pickers ---------- */
+$$('.datef').forEach(inp => {
+  const h = document.createElement('input'); h.type='date';
+  h.style.cssText='position:absolute;opacity:0;pointer-events:none;width:0;height:0';
+  inp.parentNode.appendChild(h);
+  inp.addEventListener('click', () => { try{ h.showPicker(); }catch(e){ h.focus(); } });
+  h.addEventListener('change', () => {
+    if(!h.value) return;
+    const [y,m,d] = h.value.split('-').map(Number);
+    inp.value = new Date(y,m-1,d).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+    save();
+  });
+  inp.readOnly = false;               // also allow typing
+});
+
+/* ---------- background ---------- */
+function setBg(url){ bgData = url; $('#sheet').style.setProperty('--bg-img', url ? `url("${url}")` : 'none'); }
+$('#bgFile').onchange = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{setBg(r.result);save();}; r.readAsDataURL(f); };
+$('#btnBgReset').onclick = () => { setBg(''); save(); };
+// auto-use invoice-bg.png if it sits beside this file (hosted)
+(function(){ if(!/^https?:/.test(location.protocol)) return; const i=new Image(); i.onload=()=>{ if(!bgData) $('#sheet').style.setProperty('--bg-img','url("invoice-bg.png")'); }; i.src='invoice-bg.png'; })();
+
+/* ---------- stamp ---------- */
+function setStamp(url){
+  stampData = url || '';
+  const art = $('#stampArt');
+  art.querySelectorAll('img').forEach(i => i.remove());
+  $('#stampSvg').style.display = url ? 'none' : '';
+  if (url) { const im = new Image(); im.src = url; art.appendChild(im); }
+  $('#stampReset').style.display = url ? '' : 'none';
+}
+$('#stampArt').onclick = () => $('#stampFile').click();
+$('#stampFile').onchange = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ setStamp(r.result); save(); }; r.readAsDataURL(f); e.target.value=''; };
+$('#stampReset').onclick = e => { e.stopPropagation(); setStamp(''); save(); };
+
+/* ---------- responsive fit ---------- */
+function fit(){
+  const wrap=$('#wrap'), stage=$('#stage');
+  if (root.classList.contains('fluid')) { wrap.style.transform=''; stage.style.height=''; return; }
+  const sc = Math.min(1.4, (window.innerWidth-24)/794);
+  wrap.style.transform = `scale(${sc})`;
+  stage.style.height = ($('#sheet').offsetHeight*sc)+'px';
+}
+window.addEventListener('resize', () => { setMode(); growAll(); fit(); });
+window.addEventListener('beforeprint', () => { root.classList.remove('fluid','compact'); fitPage(); });
+window.addEventListener('afterprint', () => { const sx=scrollX, sy=scrollY; setMode(); growAll(); fit(); window.scrollTo(sx, sy); });
+
+/* ---------- +/- steppers (scale with the page, hold to repeat) ---------- */
+function bump(inp, dir){
+  const st = parseFloat(inp.dataset.step) || 1;
+  const v = Math.max(0, Math.round(((parseFloat(inp.value) || 0) + dir*st) * 100) / 100);
+  inp.value = String(v);
+  inp.dispatchEvent(new Event('input', {bubbles:true}));
+}
+let holdT = null, holdI = null;
+function stopHold(){ clearTimeout(holdT); clearInterval(holdI); holdT = holdI = null; }
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest && e.target.closest('.step button'); if (!b) return;
+  e.preventDefault();
+  const inp = b.closest('td').querySelector('input.num'), dir = +b.dataset.dir;
+  stopHold(); bump(inp, dir);
+  holdT = setTimeout(() => { holdI = setInterval(() => bump(inp, dir), 90); }, 450);
+});
+['pointerup','pointercancel','blur'].forEach(ev => window.addEventListener(ev, stopHold));
+
+/* ---------- events ---------- */
+document.addEventListener('input', e => {
+  if (e.target.matches('textarea')) grow(e.target);
+  calc();
+});
+$('#addRow').onclick = () => {
+  addRow();
+  if (!withA4(fitPage)) { $('#rows').lastElementChild.remove(); calc(); alert('The A4 page is full. Remove an item or shorten descriptions to add more.'); return; }
+  calc();
+};
+$('#currency').onchange = () => { cur = $('#currency').value.split('|')[0]; calc(); };
+$('#btnNew').onclick = () => {
+  if(!confirm('Start a new invoice? Current items will be cleared (your From details stay).')) return;
+  $('#rows').innerHTML=''; addRow();
+  ['invNo','dueDate','issueDate','terms','notes'].forEach(k=>$(`[data-k=${k}]`).value='');
+  calc();
+};
+$('#btnPrint').onclick = () => window.print();
+
+/* ---------- PDF ---------- */
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res;
+    s.onerror = () => rej(new Error('Could not load ' + src));
+    document.head.appendChild(s);
+  });
+}
+async function ensureLibs(){
+  if (!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+  if (!window.jspdf) await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+}
+async function snapshot(sheet, scale, withBg){
+  const prevBg = sheet.style.getPropertyValue('--bg-img');
+  if (!withBg) sheet.style.setProperty('--bg-img', 'none');
+  try {
+    const canvas = await html2canvas(sheet, { scale, useCORS:true, backgroundColor:'#ffffff', windowWidth:794, logging:false });
+    const img = canvas.toDataURL('image/jpeg', 0.95);   // throws if the canvas is tainted
+    return { canvas, img };
+  } finally {
+    if (!withBg) sheet.style.setProperty('--bg-img', prevBg);
+  }
+}
+$('#btnPdf').onclick = async () => {
+  const btn = $('#btnPdf'), label = btn.textContent;
+  btn.textContent = 'MAKING PDF…'; btn.disabled = true;
+  const wrap = $('#wrap'), sheet = $('#sheet'), prev = wrap.style.transform;
+  let usePrint = false;
+  const wasFluid = root.classList.contains('fluid'), wasCompact = root.classList.contains('compact');
+  const exSX = window.scrollX, exSY = window.scrollY;
+  root.classList.remove('fluid','compact');
+  wrap.style.transform = 'none'; sheet.classList.add('exporting');
+  fitPage();
+  try {
+    await ensureLibs();
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    let res = null, lastErr = null;
+    // try high quality first, then lighter / no-background fallbacks
+    for (const [scale, bg] of [[2,true],[1.5,true],[1.5,false],[1,false]]) {
+      try { res = await snapshot(sheet, scale, bg); break; }
+      catch (e) { lastErr = e; console.warn('PDF attempt failed', scale, bg, e); }
+    }
+    if (!res) throw lastErr || new Error('Render failed');
+    const { canvas, img } = res;
+    const { jsPDF } = window.jspdf, pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.addImage(img, 'JPEG', 0, 0, 210, 297);
+    const no = ($('#invNo').value || 'draft').replace(/[^\w-]+/g, '_');
+    pdf.save(`Invoice-${no}.pdf`);
+  } catch (err) {
+    console.error(err);
+    usePrint = confirm('Direct PDF download failed (' + ((err && err.message) || err) + ').\n\nOpen the print window instead? Choose "Save as PDF" as the printer.');
+  } finally {
+    root.classList.toggle('fluid', wasFluid); root.classList.toggle('compact', wasCompact);
+    sheet.classList.remove('exporting'); wrap.style.transform = prev; growAll(); window.scrollTo(exSX, exSY);
+    btn.textContent = label; btn.disabled = false; fit();
+  }
+  if (usePrint) window.print();
+};
+
+load(); calc();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(calc);
+</script>
+</body>
+</html>
